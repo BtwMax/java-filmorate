@@ -56,7 +56,7 @@ public class UserService {
         return users;
     }
 
-    private long generatorId () {
+    private long generatorId() {
         return id++;
     }
 }
