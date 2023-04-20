@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @Slf4j
-public class UserController {
+class UserController {
     UserService userService = new UserService();
 
     @PostMapping("/users")
@@ -22,14 +22,14 @@ public class UserController {
 
     @PutMapping("/users")
     public User updateUser(@Valid @RequestBody User user) {
-        log.debug("Запрос на обновление пользователя");
+        log.info("Запрос на обновление пользователя");
         userService.updateUser(user);
         return user;
     }
 
     @GetMapping("/users")
     public List<User> getAllUsers() {
-        log.debug("Текущее количество пользователей: {}", userService.getAllUsers().size());
+        log.info("Текущее количество пользователей: {}", userService.getAllUsers().size());
         return userService.getAllUsers();
     }
 }

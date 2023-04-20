@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @Slf4j
-public class FilmController {
+class FilmController {
     FilmService filmService = new FilmService();
 
     @PostMapping("/films")
@@ -29,7 +29,7 @@ public class FilmController {
 
     @GetMapping("/films")
     public List<Film> getAllUsers() {
-        log.debug("Текущее количество фильмов: {}", filmService.getAllFilms().size());
+        log.info("Текущее количество фильмов: {}", filmService.getAllFilms().size());
         return filmService.getAllFilms();
     }
 }
