@@ -1,71 +1,95 @@
 package ru.yandex.practicum.filmorate.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.inmemory.InMemoryUserStorage;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.*;
+import java.util.stream.Collectors;
+
 
 @Service
 public class UserService {
+    InMemoryUserStorage userStorage;
 
-    private final List<User> users = new ArrayList<>();
-    private long id = 1;
+    @Autowired
+    public UserService(InMemoryUserStorage userStorage) {
+        this.userStorage = userStorage;
+    }
 
     public void addUser(User user) {
-        validate(user);
-        /*Генератор айди*/
-        if (user.getId() == 0) {
-            user.setId(generatorId());
-        }
-        users.add(user);
+        userStorage.addUser(user);
+    }
+
+    public User getUserById(long id) {
+        return userStorage.getUserById(id);
     }
 
     public void updateUser(User user) {
-        validate(user);
-        int index = (int) (user.getId() - 1);
-        users.set(index, user);
+        userStorage.updateUser(user);
     }
 
-    public List<User> getAllUsers() {
-        return users;
+    public void removeUser(long id) {
+        userStorage.removeUser(id);
     }
 
-    private long generatorId() {
-        return id++;
+    public Collection<User> getAllUsers() {
+        return userStorage.getAllUsers();
     }
 
-    private void validate(User user) {
-        /*Паттерн для проверки строки на соответствие Email*/
-        Pattern pattern = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}");
-        Matcher mat = pattern.matcher(user.getEmail());
-        /*Если имя null, то засетить логин в имя*/
-        if (user.getName() == null) {
-            user.setName(user.getLogin());
+    public void addFriend(Long id, Long friendId) {
+        if (Objects.equals(id, friendId)) {
+            throw new NotFoundException("Нельзя добавить самого себя");
         }
-        /*Если имя пустое или пробел, то засетить логин в имя*/
-        if (user.getName().isBlank() || user.getName().equals("") || user.getName().isEmpty()) {
-            user.setName(user.getLogin());
+        /*Проверка, существуют ли пользователи*/
+        userStorage.userExistsById(id);
+        userStorage.userExistsById(friendId);
+
+        User user = userStorage.getUserById(id);
+        User friend = userStorage.getUserById(friendId);
+
+        user.getFriends().add(friendId);
+        friend.getFriends().add(id);
+
+        userStorage.updateUser(user);
+        userStorage.updateUser(friend);
+    }
+
+    public void deleteFriend(Long id, Long friendId) {
+        if (Objects.equals(id, friendId)) {
+            throw new NotFoundException("Нельзя удалить самого себя");
         }
-        /*Генератор айди*/
-        if (user.getId() == 0) {
-            user.setId(generatorId());
-        }
-        /*Проверка Email на корректность*/
-        if (user.getEmail().equals("") || user.getEmail().isBlank() || user.getEmail().isEmpty() || !mat.matches()) {
-            throw new ValidationException("Ошибка валидации Email");
-        }
-        /*Проверка логина на корректность*/
-        if (user.getLogin().equals("") || user.getLogin().isBlank()) {
-            throw new ValidationException("Ошибка валидации логина");
-        }
-        /*Проверка даты рождения на корректность*/
-        if (user.getBirthday().isAfter(LocalDate.now())) {
-            throw new ValidationException("Ошибка валидации дня рождения");
-        }
+        /*Проверка, существуют ли пользователи*/
+        userStorage.userExistsById(id);
+        userStorage.userExistsById(friendId);
+
+        User user = userStorage.getUserById(id);
+        User friend = userStorage.getUserById(friendId);
+
+        user.getFriends().remove(friendId);
+        friend.getFriends().remove(id);
+
+        userStorage.updateUser(user);
+        userStorage.updateUser(friend);
+    }
+
+    public List<User> getAllUserFriends(long id) {
+        User user = userStorage.getUserById(id);
+
+        return user.getFriends().stream()
+                .map(userStorage::getUserById)
+                .collect(Collectors.toList());
+    }
+
+    public List<User> getCommonFriends(long firstUserId, long secondUserId) {
+        User firstUser = userStorage.getUserById(firstUserId);
+        User secondUser = userStorage.getUserById(secondUserId);
+
+        return firstUser.getFriends().stream()
+                .filter(secondUser.getFriends()::contains)
+                .map(userStorage::getUserById)
+                .collect(Collectors.toList());
     }
 }
