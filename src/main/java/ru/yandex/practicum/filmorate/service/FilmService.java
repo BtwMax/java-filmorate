@@ -1,53 +1,83 @@
 package ru.yandex.practicum.filmorate.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.inmemory.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.inmemory.InMemoryUserStorage;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.User;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
+
 
 @Service
 public class FilmService {
 
-    private final List<Film> films = new ArrayList<>();
-    private long id = 1;
+    InMemoryFilmStorage filmStorage;
+    InMemoryUserStorage userStorage;
+
+    @Autowired
+    public FilmService(InMemoryFilmStorage filmStorage, InMemoryUserStorage userStorage) {
+        this.filmStorage = filmStorage;
+        this.userStorage = userStorage;
+    }
 
     public void addFilm(Film film) {
-        validate(film);
-        films.add(film);
+        filmStorage.addFilm(film);
+    }
+
+    public Film getFilmById(long id) {
+        return filmStorage.getFilmById(id);
     }
 
     public void updateFilm(Film film) {
-        validate(film);
-        int index = (int) (film.getId() - 1);
-        films.set(index, film);
+        filmStorage.updateFilm(film);
     }
 
-    public List<Film> getAllFilms() {
-        return films;
+    public void removeFilm(long id) {
+        filmStorage.removeFilm(id);
     }
 
-    private long idGenerator() {
-        return id++;
+    public Collection<Film> getAllFilms() {
+        return filmStorage.getAllFilms();
     }
 
-    private void validate(Film film) {
-        if (film.getName().isBlank() || film.getName().isEmpty()) {
-            throw new ValidationException("Ошибка валидации названия фильма");
+    public void addLike(long filmId, long userId) {
+        Film film = filmStorage.getFilmById(filmId);
+        User user = userStorage.getUserById(userId);
+
+        if (film == null) {
+            throw new NotFoundException("Фильм с id = " + filmId + " не найден");
         }
-        if (film.getDescription().length() > 200) {
-            throw new ValidationException("Ошибка валидации описания фильма");
+        if (user == null) {
+            throw new NotFoundException("Пользователь с id = " + userId + " не найден");
         }
-        if (film.getReleaseDate().isBefore(LocalDate.of(1895,12,28))) {
-            throw new ValidationException("Ошибка валидации даты");
+
+        film.getLikes().add(userId);
+    }
+
+    public void removeUserLike(long filmId, long userId) {
+        Film film = filmStorage.getFilmById(filmId);
+        User user = userStorage.getUserById(userId);
+
+        if (film == null) {
+            throw new NotFoundException("Фильм с id = " + filmId + " не найден");
         }
-        if (film.getDuration() < 1) {
-            throw new ValidationException("Ошибка валидации продолжительности фильма");
+        if (user == null) {
+            throw new NotFoundException("Пользователь с id = " + userId + " не найден");
         }
-        if (film.getId() == 0) {
-            film.setId(idGenerator());
-        }
+
+        film.getLikes().remove(userId);
+    }
+
+    public List<Film> getMostPopularFilms(int count) {
+        return filmStorage.getAllFilms().stream()
+                .sorted(Comparator.comparing(film -> film.getLikes().size(), Comparator.reverseOrder()))
+                .limit(count)
+                .collect(Collectors.toList());
     }
 }
