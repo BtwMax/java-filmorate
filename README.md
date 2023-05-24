@@ -3,7 +3,7 @@
 ## Модель базы данных представлена на ER-диаграмме
 
 ---
-![Модель базы данных](src/main/resources/Filmorate_DB_Schema.png)
+![Модель базы данных](src/main/resources/Filmorate_DB_Schema.PNG)
 
 ### Примеры запросов в базу данных
 
