@@ -14,7 +14,5 @@ public interface UserStorage {
 
     void removeUser(long id);
 
-    public void userExistsById(long id);
-
     Collection<User> getAllUsers();
 }

@@ -1,22 +1,29 @@
 package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dao.FriendshipDao;
+import ru.yandex.practicum.filmorate.dao.UserDbStorage;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.inmemory.InMemoryUserStorage;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 @Service
 public class UserService {
-    InMemoryUserStorage userStorage;
+    private final UserStorage userStorage;
+    private final UserDbStorage userDbStorage;
+    private final FriendshipDao friendshipDao;
 
     @Autowired
-    public UserService(InMemoryUserStorage userStorage) {
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage, UserDbStorage userDbStorage,
+                       FriendshipDao friendshipDao) {
         this.userStorage = userStorage;
+        this.userDbStorage = userDbStorage;
+        this.friendshipDao = friendshipDao;
     }
 
     public void addUser(User user) {
@@ -43,18 +50,7 @@ public class UserService {
         if (Objects.equals(id, friendId)) {
             throw new NotFoundException("Нельзя добавить самого себя");
         }
-        /*Проверка, существуют ли пользователи*/
-        userStorage.userExistsById(id);
-        userStorage.userExistsById(friendId);
-
-        User user = userStorage.getUserById(id);
-        User friend = userStorage.getUserById(friendId);
-
-        user.getFriends().add(friendId);
-        friend.getFriends().add(id);
-
-        userStorage.updateUser(user);
-        userStorage.updateUser(friend);
+        friendshipDao.addFriend(id, friendId);
     }
 
     public void deleteFriend(Long id, Long friendId) {
@@ -62,34 +58,14 @@ public class UserService {
             throw new NotFoundException("Нельзя удалить самого себя");
         }
         /*Проверка, существуют ли пользователи*/
-        userStorage.userExistsById(id);
-        userStorage.userExistsById(friendId);
-
-        User user = userStorage.getUserById(id);
-        User friend = userStorage.getUserById(friendId);
-
-        user.getFriends().remove(friendId);
-        friend.getFriends().remove(id);
-
-        userStorage.updateUser(user);
-        userStorage.updateUser(friend);
+        friendshipDao.deleteFriend(id, friendId);
     }
 
     public List<User> getAllUserFriends(long id) {
-        User user = userStorage.getUserById(id);
-
-        return user.getFriends().stream()
-                .map(userStorage::getUserById)
-                .collect(Collectors.toList());
+        return userDbStorage.getAllUserFriends(id);
     }
 
     public List<User> getCommonFriends(long firstUserId, long secondUserId) {
-        User firstUser = userStorage.getUserById(firstUserId);
-        User secondUser = userStorage.getUserById(secondUserId);
-
-        return firstUser.getFriends().stream()
-                .filter(secondUser.getFriends()::contains)
-                .map(userStorage::getUserById)
-                .collect(Collectors.toList());
+        return friendshipDao.getCommonFriends(firstUserId, secondUserId);
     }
 }
