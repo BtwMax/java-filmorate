@@ -28,7 +28,7 @@ public class User {
     private LocalDate birthday;
     final Set<Long> friends = new HashSet<>();
 
-    public String checkName (String name) {
+    public String checkName(String name) {
         if ((name == null) || (name.isEmpty()) || (name.isBlank())) {
             setName(login);
             return login;
