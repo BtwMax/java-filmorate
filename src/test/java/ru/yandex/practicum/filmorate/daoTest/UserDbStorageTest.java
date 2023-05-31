@@ -91,7 +91,7 @@ public class UserDbStorageTest {
         Assertions.assertEquals(1, userDbStorage.getAllUsers().size());
         Assertions.assertThrows(
                 NotFoundException.class,
-                ()-> userDbStorage.getUserById(2)
+                () -> userDbStorage.getUserById(2)
         );
     }
 

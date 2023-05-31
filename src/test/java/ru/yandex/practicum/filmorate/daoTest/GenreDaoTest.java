@@ -26,7 +26,7 @@ public class GenreDaoTest {
     public void getGenreById() {
         Genre genreId1 = genreDao.getGenreById(1);
         Assertions.assertNotNull(genreId1);
-        Assertions.assertEquals( new Genre(1, "Комедия"), genreId1);
+        Assertions.assertEquals(new Genre(1, "Комедия"), genreId1);
     }
 
     @Test
