@@ -114,7 +114,7 @@ public class FilmDbStorageTest {
         Assertions.assertEquals(1, filmDbStorage.getAllFilms().size());
         Assertions.assertThrows(
                 NotFoundException.class,
-                ()-> filmDbStorage.getFilmById(1)
+                () -> filmDbStorage.getFilmById(1)
         );
     }
 
