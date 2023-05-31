@@ -153,8 +153,8 @@ public class FilmDbStorageTest {
         likeDao.addLike(firstFilm.getId(), secondUser.getId());
         likeDao.removeUserLike(firstFilm.getId(), firstUser.getId());
 
-        assertThat(likeDao.getFilmLikes(firstUser.getId())).hasSize(1);
-        assertThat(likeDao.getFilmLikes(firstUser.getId())).contains(secondUser.getId());
+        assertThat(likeDao.getFilmLikes(firstFilm.getId())).hasSize(1);
+        assertThat(likeDao.getFilmLikes(firstFilm.getId())).contains(secondUser.getId());
     }
 
     @Test
