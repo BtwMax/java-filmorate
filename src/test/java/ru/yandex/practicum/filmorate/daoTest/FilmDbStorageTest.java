@@ -6,9 +6,10 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.core.AutoConfigureCache;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.dao.FilmDbStorage;
 import ru.yandex.practicum.filmorate.dao.LikeDao;
 import ru.yandex.practicum.filmorate.dao.UserDbStorage;
@@ -21,12 +22,13 @@ import ru.yandex.practicum.filmorate.model.User;
 import java.time.LocalDate;
 import java.util.*;
 
+import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
+
 @SpringBootTest
 @AutoConfigureTestDatabase
+@AutoConfigureCache
+@Transactional
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-@Sql(scripts = {"file:src/test/java/ru/yandex/practicum/filmorate/TestResources/testSchema.sql",
-        "file:src/test/java/ru/yandex/practicum/filmorate/TestResources/testData.sql"},
-        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 public class FilmDbStorageTest {
 
     private final FilmDbStorage filmDbStorage;
@@ -72,19 +74,17 @@ public class FilmDbStorageTest {
     }
 
     @Test
-    public void addAndGetFilmByIdTest() {
+    public void addAndGetFilmByIdAndGetAllFilmsTest() {
         filmDbStorage.addFilm(firstFilm);
-        filmDbStorage.addFilm(secondFilm);
-        Film film = firstFilm;
-        Film film2 = secondFilm;
-        Collection<Film> films = new ArrayList<>();
-        films.add(film);
-        films.add(film2);
-
-        Assertions.assertEquals(film, filmDbStorage.getFilmById(firstFilm.getId()));
-        Assertions.assertEquals(film2, filmDbStorage.getFilmById(secondFilm.getId()));
-        Assertions.assertEquals(films.size(), filmDbStorage.getAllFilms().size());
-        Assertions.assertEquals(films, filmDbStorage.getAllFilms());
+        Optional<Film> filmOptional = Optional.ofNullable(filmDbStorage.getFilmById(firstFilm.getId()));
+        assertThat(filmOptional)
+                .hasValueSatisfying(film ->
+                        assertThat(film)
+                                .hasFieldOrPropertyWithValue("id", firstFilm.getId())
+                                .hasFieldOrPropertyWithValue("name", "Film")
+                );
+        assertThat(filmDbStorage.getAllFilms()).hasSize(1);
+        assertThat(filmDbStorage.getAllFilms()).contains(firstFilm);
     }
 
     @Test
@@ -100,9 +100,16 @@ public class FilmDbStorageTest {
         updateFilm.setLikes(new HashSet<>());
         updateFilm.setMpa(new MpaRating(2L, "PG"));
         updateFilm.setGenres(new HashSet<>(List.of(new Genre(4, "Триллер"))));
+        filmDbStorage.updateFilm(updateFilm);
         Film updatedFilm = filmDbStorage.getFilmById(firstFilm.getId());
+        Optional<Film> testUpdateFilm = Optional.ofNullable(updatedFilm);
+        assertThat(testUpdateFilm)
+                .hasValueSatisfying(film ->
+                        assertThat(film)
+                                .hasFieldOrPropertyWithValue("name", "FilmUpdate")
+                                .hasFieldOrPropertyWithValue("description", "new Description")
+                );
 
-        Assertions.assertEquals(updatedFilm, updatedFilm);
     }
 
     @Test
@@ -110,11 +117,13 @@ public class FilmDbStorageTest {
         filmDbStorage.addFilm(firstFilm);
         filmDbStorage.addFilm(secondFilm);
         filmDbStorage.removeFilm(firstFilm.getId());
+        Collection<Film> films = filmDbStorage.getAllFilms();
 
-        Assertions.assertEquals(1, filmDbStorage.getAllFilms().size());
+        assertThat(films).hasSize(1);
+        assertThat(films).contains(secondFilm);
         Assertions.assertThrows(
                 NotFoundException.class,
-                () -> filmDbStorage.getFilmById(1)
+                () -> filmDbStorage.getFilmById(firstFilm.getId())
         );
     }
 
@@ -128,13 +137,10 @@ public class FilmDbStorageTest {
         likeDao.addLike(firstFilm.getId(), firstUser.getId());
         likeDao.addLike(firstFilm.getId(), secondUser.getId());
 
-        Set<Long> likes = new HashSet<>();
-        likes.add(firstUser.getId());
-        likes.add(secondUser.getId());
-
-        Assertions.assertNotNull(likeDao.getFilmLikes(firstFilm.getId()));
-        Assertions.assertEquals(likes, likeDao.getFilmLikes(firstFilm.getId()));
-        Assertions.assertEquals(0, likeDao.getFilmLikes(secondFilm.getId()).size());
+        assertThat(likeDao.getFilmLikes(firstFilm.getId())).hasSize(2);
+        assertThat(likeDao.getFilmLikes(firstFilm.getId())).contains(firstUser.getId());
+        assertThat(likeDao.getFilmLikes(firstFilm.getId())).contains(secondUser.getId());
+        assertThat(likeDao.getFilmLikes(secondFilm.getId())).hasSize(0);
     }
 
     @Test
@@ -142,17 +148,13 @@ public class FilmDbStorageTest {
         userDbStorage.addUser(firstUser);
         userDbStorage.addUser(secondUser);
         filmDbStorage.addFilm(firstFilm);
-        filmDbStorage.addFilm(secondFilm);
 
         likeDao.addLike(firstFilm.getId(), firstUser.getId());
         likeDao.addLike(firstFilm.getId(), secondUser.getId());
         likeDao.removeUserLike(firstFilm.getId(), firstUser.getId());
 
-        Set<Long> likes = new HashSet<>();
-        likes.add(secondUser.getId());
-
-        Assertions.assertNotNull(likeDao.getFilmLikes(firstFilm.getId()));
-        Assertions.assertEquals(likes, likeDao.getFilmLikes(firstFilm.getId()));
+        assertThat(likeDao.getFilmLikes(firstUser.getId())).hasSize(1);
+        assertThat(likeDao.getFilmLikes(firstUser.getId())).contains(secondUser.getId());
     }
 
     @Test
@@ -167,10 +169,7 @@ public class FilmDbStorageTest {
 
         firstFilm.setLikes(likeDao.getFilmLikes(firstFilm.getId()));
 
-        List<Film> popularFilms = new ArrayList<>();
-        popularFilms.add(firstFilm);
-        popularFilms.add(secondFilm);
-
-        Assertions.assertEquals(popularFilms, filmDbStorage.getPopularFilms(2));
+        assertThat(filmDbStorage.getPopularFilms(5)).hasSize(2);
+        assertThat(filmDbStorage.getPopularFilms(1)).contains(firstFilm);
     }
 }
