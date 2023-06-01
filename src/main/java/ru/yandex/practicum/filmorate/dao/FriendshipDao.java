@@ -1,63 +1,48 @@
 package ru.yandex.practicum.filmorate.dao;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.FriendshipStorage;
 
 import java.util.List;
+import java.util.Map;
 
 @Component
-public class FriendshipDao {
+@RequiredArgsConstructor
+public class FriendshipDao implements FriendshipStorage {
 
     private final JdbcTemplate jdbcTemplate;
-    private final UserStorage userStorage;
-    private final UserDbStorage userDbStorage;
 
-    @Autowired
-    public FriendshipDao(JdbcTemplate jdbcTemplate, @Qualifier("userDbStorage") UserStorage userStorage,
-                         UserDbStorage userDbStorage) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.userStorage = userStorage;
-        this.userDbStorage = userDbStorage;
-    }
-
+    @Override
     public void addFriend(Long id, Long friendId) {
-        User user = userStorage.getUserById(id);
-        User friend = userStorage.getUserById(friendId);
-        if (user != null && friend != null) {
-            int status = 0;
-            if (friend.getFriends().contains(id)) {
-                status = 1;
-                String sqlQuery = "UPDATE friends SET status = ? " +
-                        "WHERE user_id = ? AND friend_id = ?";
-                jdbcTemplate.update(sqlQuery, status, friendId, id);
-            }
-            String sqlQuery = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, ?)";
-            jdbcTemplate.update(sqlQuery, id, friendId, status);
+        int status = 0;
+        String sql = "SELECT user_id, friend_id FROM friends " +
+                "WHERE user_id = ? AND friend_id = ?";
+        List<Map<String, Object>> friends = jdbcTemplate.queryForList(sql, friendId, id);
+        List<Map<String, Object>> friends1 = jdbcTemplate.queryForList(sql, id, friendId);
+        if (friends.size() == 0 || friends1.size() == 0) {
+            status = 1;
+            String sqlQuery = "UPDATE friends SET status = ? " +
+                    "WHERE user_id = ? AND friend_id = ?";
+            jdbcTemplate.update(sqlQuery, status, friendId, id);
         }
+        String sqlQuery = "INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, ?)";
+        jdbcTemplate.update(sqlQuery, id, friendId, status);
     }
 
+    @Override
     public void deleteFriend(Long id, Long friendId) {
-        User user = userStorage.getUserById(id);
-        User friend = userStorage.getUserById(friendId);
-        if (user != null && friend != null) {
-            String sqlQuery = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
-            jdbcTemplate.update(sqlQuery, id, friendId);
-            if (friend.getFriends().contains(id)) {
-                int status = 0;
-                sqlQuery = "UPDATE friends SET status = ? " +
-                        "WHERE user_id = ? AND friend_id = ?";
-                jdbcTemplate.update(sqlQuery, status, friendId, id);
-            }
+        String sqlQuery = "DELETE FROM friends WHERE user_id = ? AND friend_id = ?";
+        jdbcTemplate.update(sqlQuery, id, friendId);
+        String sql = "SELECT user_id, friend_id FROM friends " +
+                "WHERE user_id = ? AND friend_id = ?";
+        List<Map<String, Object>> friends = jdbcTemplate.queryForList(sql, friendId, id);
+        if (friends.size() == 0) {
+            int status = 0;
+            sqlQuery = "UPDATE friends SET status = ? " +
+                    "WHERE user_id = ? AND friend_id = ?";
+            jdbcTemplate.update(sqlQuery, status, friendId, id);
         }
-    }
-
-    public List<User> getCommonFriends(Long firstUserId, Long secondUserId) {
-        List<User> friends = userDbStorage.getAllUserFriends(firstUserId);
-        friends.retainAll(userDbStorage.getAllUserFriends(secondUserId));
-        return friends;
     }
 }

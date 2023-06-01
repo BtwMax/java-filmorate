@@ -6,6 +6,7 @@ import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.MpaRating;
+import ru.yandex.practicum.filmorate.storage.MpaRatingStorage;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,16 +14,18 @@ import java.util.Collection;
 
 @Component
 @RequiredArgsConstructor
-public class MpaRatingDao {
+public class MpaRatingDao implements MpaRatingStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
+    @Override
     public Collection<MpaRating> getAllRatings() {
         String sqlQuery = "SELECT * FROM ratings_mpa " +
                 "ORDER BY id";
         return jdbcTemplate.query(sqlQuery, this::mapRowMpaRating);
     }
 
+    @Override
     public MpaRating getMpaRatingById(Long id) {
         SqlRowSet sqlRowSet = jdbcTemplate.queryForRowSet("SELECT * FROM ratings_mpa " +
                 "WHERE id = ?", id);

@@ -21,7 +21,7 @@ import java.util.List;
 @Component
 @Qualifier("userDbStorage")
 @RequiredArgsConstructor
-public class UserDbStorage implements UserStorage {
+public class UserDao implements UserStorage {
 
     private final JdbcTemplate jdbcTemplate;
 

@@ -9,24 +9,19 @@ import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MpaRating;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 @Qualifier("filmDbStorage")
 @RequiredArgsConstructor
-public class FilmDbStorage implements FilmStorage {
+public class FilmDao implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
-    private final MpaRatingDao mpaRating;
-    private final FilmGenreDao filmGenre;
-    private final GenreDao genreDao;
-    private final LikeDao likeDao;
 
     @Override
     public void addFilm(Film film) {
@@ -44,9 +39,6 @@ public class FilmDbStorage implements FilmStorage {
         }, keyHolder);
         long idKey = keyHolder.getKey().longValue();
         film.setId(idKey);
-        if (film.getGenres() != null) {
-            filmGenre.addFilmGenre(film);
-        }
     }
 
     @Override
@@ -62,9 +54,9 @@ public class FilmDbStorage implements FilmStorage {
                 sqlRowSet.getString("description"),
                 sqlRowSet.getDate("release_Date").toLocalDate(),
                 sqlRowSet.getInt("duration"),
-                new HashSet<>(likeDao.getFilmLikes(sqlRowSet.getLong("id"))),
-                mpaRating.getMpaRatingById(sqlRowSet.getLong("rating_id")),
-                filmGenre.getAllFilmGenres(sqlRowSet.getLong("id"))
+                new HashSet<>(),
+                new MpaRating(sqlRowSet.getLong("rating_id"), null),
+                null
         );
     }
 
@@ -84,19 +76,6 @@ public class FilmDbStorage implements FilmStorage {
                 film.getDuration(),
                 film.getMpa().getId(),
                 film.getId());
-        film.setMpa(mpaRating.getMpaRatingById(film.getMpa().getId()));
-        film.setLikes(likeDao.getFilmLikes(film.getId()));
-        if (film.getGenres() != null) {
-            Collection<Genre> sortGenres = film.getGenres().stream()
-                    .sorted(Comparator.comparing(Genre::getId))
-                    .collect(Collectors.toList());
-            film.setGenres(new LinkedHashSet<>(sortGenres));
-            for (Genre genre : film.getGenres()) {
-                genre.setName(genreDao.getGenreById(genre.getId()).getName());
-            }
-        }
-        filmGenre.removeFilmGenre(film);
-        filmGenre.addFilmGenre(film);
     }
 
     @Override
@@ -115,10 +94,10 @@ public class FilmDbStorage implements FilmStorage {
                 rs.getString("description"),
                 rs.getDate("release_Date").toLocalDate(),
                 rs.getInt("duration"),
-                new HashSet<>(likeDao.getFilmLikes(rs.getLong("id"))),
-                mpaRating.getMpaRatingById(rs.getLong("rating_id")),
-                filmGenre.getAllFilmGenres(rs.getLong("id")))
-        );
+                new HashSet<>(),
+                new MpaRating(rs.getLong("rating_id"), null),
+                null
+        ));
     }
 
     public List<Film> getPopularFilms(Integer count) {
@@ -132,9 +111,9 @@ public class FilmDbStorage implements FilmStorage {
                         rs.getString("description"),
                         rs.getDate("release_Date").toLocalDate(),
                         rs.getInt("duration"),
-                        new HashSet<>(likeDao.getFilmLikes(rs.getLong("id"))),
-                        mpaRating.getMpaRatingById(rs.getLong("rating_id")),
-                        filmGenre.getAllFilmGenres(rs.getLong("id"))),
+                        new HashSet<>(),
+                        new MpaRating(rs.getLong("rating_id"), null),
+                        null),
                 count);
     }
 }

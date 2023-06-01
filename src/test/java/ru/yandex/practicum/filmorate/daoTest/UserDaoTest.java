@@ -8,9 +8,10 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.dao.FriendshipDao;
-import ru.yandex.practicum.filmorate.dao.UserDbStorage;
+import ru.yandex.practicum.filmorate.dao.UserDao;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -25,10 +26,11 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 @AutoConfigureCache
 @Transactional
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-public class UserDbStorageTest {
+public class UserDaoTest {
 
-    private final UserDbStorage userDbStorage;
+    private final UserDao userDao;
     private final FriendshipDao friendshipDao;
+    private final UserService userService;
     private static User firstUser;
     private static User secondUser;
     private static User thridUser;
@@ -58,11 +60,11 @@ public class UserDbStorageTest {
 
     @Test
     public void addUserAndGetAllUsersAndGetUserByIdTest() {
-        userDbStorage.addUser(firstUser);
-        userDbStorage.addUser(secondUser);
-        userDbStorage.addUser(thridUser);
-        Collection<User> users = userDbStorage.getAllUsers();
-        Optional<User> userOptional = Optional.ofNullable(userDbStorage.getUserById(thridUser.getId()));
+        userDao.addUser(firstUser);
+        userDao.addUser(secondUser);
+        userDao.addUser(thridUser);
+        Collection<User> users = userDao.getAllUsers();
+        Optional<User> userOptional = Optional.ofNullable(userDao.getUserById(thridUser.getId()));
 
         assertThat(userOptional)
                 .hasValueSatisfying(user ->
@@ -75,7 +77,7 @@ public class UserDbStorageTest {
 
     @Test
     public void updateUserTest() {
-        userDbStorage.addUser(firstUser);
+        userDao.addUser(firstUser);
         User updateUser = User.builder()
                 .id(firstUser.getId())
                 .name("UpdateName")
@@ -83,8 +85,8 @@ public class UserDbStorageTest {
                 .email("secondUser@yandex.ru")
                 .birthday(LocalDate.of(1990, 10, 8))
                 .build();
-        userDbStorage.updateUser(updateUser);
-        Optional<User> testUpdateUser = Optional.ofNullable(userDbStorage.getUserById(firstUser.getId()));
+        userDao.updateUser(updateUser);
+        Optional<User> testUpdateUser = Optional.ofNullable(userDao.getUserById(firstUser.getId()));
         assertThat(testUpdateUser)
                 .hasValueSatisfying(user -> assertThat(user)
                         .hasFieldOrPropertyWithValue("name", "UpdateName"));
@@ -92,9 +94,9 @@ public class UserDbStorageTest {
 
     @Test
     public void addFriendAndGetCommonFriendsTest() {
-        userDbStorage.addUser(firstUser);
-        userDbStorage.addUser(secondUser);
-        userDbStorage.addUser(thridUser);
+        userDao.addUser(firstUser);
+        userDao.addUser(secondUser);
+        userDao.addUser(thridUser);
         friendshipDao.addFriend(firstUser.getId(), secondUser.getId());
         friendshipDao.addFriend(firstUser.getId(), thridUser.getId());
         friendshipDao.addFriend(secondUser.getId(), thridUser.getId());
@@ -109,35 +111,35 @@ public class UserDbStorageTest {
         List<User> commonFriends = new ArrayList<>();
         commonFriends.add(thridUser);
 
-        assertThat(userDbStorage.getAllUserFriends(firstUser.getId())).hasSize(firstUserFriends.size());
-        assertThat(userDbStorage.getAllUserFriends(firstUser.getId())).contains(secondUser);
-        assertThat(userDbStorage.getAllUserFriends(firstUser.getId())).contains(thridUser);
-        assertThat(userDbStorage.getAllUserFriends(secondUser.getId())).hasSize(secondUserFriends.size());
-        assertThat(userDbStorage.getAllUserFriends(secondUser.getId())).contains(thridUser);
-        assertThat(friendshipDao.getCommonFriends(firstUser.getId(), secondUser.getId())).hasSize(commonFriends.size());
-        assertThat(friendshipDao.getCommonFriends(firstUser.getId(), secondUser.getId())).contains(thridUser);
+        assertThat(userDao.getAllUserFriends(firstUser.getId())).hasSize(firstUserFriends.size());
+        assertThat(userDao.getAllUserFriends(firstUser.getId())).contains(secondUser);
+        assertThat(userDao.getAllUserFriends(firstUser.getId())).contains(thridUser);
+        assertThat(userDao.getAllUserFriends(secondUser.getId())).hasSize(secondUserFriends.size());
+        assertThat(userDao.getAllUserFriends(secondUser.getId())).contains(thridUser);
+        assertThat(userService.getCommonFriends(firstUser.getId(), secondUser.getId())).hasSize(commonFriends.size());
+        assertThat(userService.getCommonFriends(firstUser.getId(), secondUser.getId())).contains(thridUser);
     }
 
     @Test
     public void deleteFriend() {
-        userDbStorage.addUser(firstUser);
-        userDbStorage.addUser(secondUser);
+        userDao.addUser(firstUser);
+        userDao.addUser(secondUser);
         friendshipDao.addFriend(firstUser.getId(), secondUser.getId());
         friendshipDao.deleteFriend(firstUser.getId(), secondUser.getId());
 
-        assertThat(userDbStorage.getAllUserFriends(firstUser.getId())).hasSize(0);
+        assertThat(userDao.getAllUserFriends(firstUser.getId())).hasSize(0);
     }
 
     @Test
     public void deleteUserTest() {
-        userDbStorage.addUser(firstUser);
-        userDbStorage.addUser(secondUser);
-        userDbStorage.removeUser(secondUser.getId());
-        Collection<User> listUsers = userDbStorage.getAllUsers();
+        userDao.addUser(firstUser);
+        userDao.addUser(secondUser);
+        userDao.removeUser(secondUser.getId());
+        Collection<User> listUsers = userDao.getAllUsers();
         assertThat(listUsers).hasSize(1);
         Assertions.assertThrows(
                 NotFoundException.class,
-                () -> userDbStorage.getUserById(2)
+                () -> userDao.getUserById(2)
         );
     }
 }
