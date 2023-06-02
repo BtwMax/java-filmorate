@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.model;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import ru.yandex.practicum.filmorate.validation.AfterCinemaBirthday;
 
@@ -9,11 +10,11 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.Size;
 import java.time.LocalDate;
-import java.util.HashSet;
 import java.util.Set;
 
 @Data
 @AllArgsConstructor
+@Builder
 public class Film {
 
     private long id;
@@ -26,5 +27,7 @@ public class Film {
     private LocalDate releaseDate;
     @Positive(message = "Длина фильма должна быть больше 0")
     private int duration;
-    final Set<Long> likes = new HashSet<>();
+    private Set<Long> likes;
+    private MpaRating mpa;
+    private Set<Genre> genres;
 }

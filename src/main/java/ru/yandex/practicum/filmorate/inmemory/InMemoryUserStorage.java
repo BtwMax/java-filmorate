@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.inmemory;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ServerException;
@@ -15,6 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
+@Qualifier("userStorage")
 public class InMemoryUserStorage implements UserStorage {
 
 
@@ -64,7 +66,6 @@ public class InMemoryUserStorage implements UserStorage {
         return id++;
     }
 
-    @Override
     public void userExistsById(long id) {
         if (!users.containsKey(id)) {
             throw new NotFoundException("Пользователь с id = " + id + " не найден");
